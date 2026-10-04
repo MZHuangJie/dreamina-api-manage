@@ -1,0 +1,88 @@
+# 生产部署：核心 + Caddy 自动 HTTPS
+#
+# 关键点：**只把 Caddy 暴露到公网**。核心容器的端口不映射到宿主机，
+# 而且管理端已经绑在容器内的回环地址上——外面的人拿到 IP 也扫不到管理接口。
+#
+#   cp .env.example .env   # 填好域名和令牌
+#   docker compose up -d --build
+#
+services:
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dreamina-manager:latest
+    restart: unless-stopped
+
+    # 注意这里用 expose 而不是 ports：
+    # 端口只在 compose 内部网络可见，不发布到宿主机。
+    expose:
+      - "8791"
+
+    volumes:
+      # 账号数据与密钥。务必备份这个目录，密钥丢了账号就解不开了。
+      - ./data:/data
+
+    env_file:
+      - .env
+
+    environment:
+      # 管理端留在容器内回环，外面完全不可达
+      MANAGER_HOST: 127.0.0.1
+      MANAGER_PORT: "8787"
+      # 网关对外
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: "8791"
+
+    # Chromium 在默认 64MB 的 /dev/shm 上会崩标签页
+    shm_size: "1gb"
+
+    # 一个 Chromium 实例 + 若干页面上下文，2GB 足够；按账号数上调
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+    healthcheck:
+      # 用 /healthz：/v1/models 需要密钥，无密钥返回 401 会让检查永远失败
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8791/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      manager:
+        condition: service_healthy
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+    environment:
+      DOMAIN: ${DOMAIN:?请在 .env 里设置 DOMAIN}
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

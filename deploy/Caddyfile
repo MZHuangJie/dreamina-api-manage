@@ -1,0 +1,34 @@
+# Caddy 配置：自动申请并续期 Let's Encrypt 证书。
+#
+# 这是整个部署里最省事的一环——不需要自己跑 certbot，
+# 也不需要写 80/443 的重定向规则，Caddy 全包了。
+
+{$DOMAIN} {
+	# 只反代网关端口。核心容器的 8787（管理端）根本不在这个网络路径上，
+	# 就算这里写错了路径，管理接口也透不出来。
+	reverse_proxy manager:8791 {
+		# 同步生成最长会等 180 秒，反代超时必须大于它，否则调用方会看到 502
+		transport http {
+			response_header_timeout 300s
+		}
+	}
+
+	# 生成接口耗时长，关掉缓冲让进度能及时传出去
+	flush_interval -1
+
+	encode gzip
+
+	log {
+		output file /data/access.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+		format json
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+}

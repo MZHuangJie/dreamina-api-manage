@@ -1,0 +1,41 @@
+appId: com.local.dreamina-manager
+productName: Dreamina 账号管理器
+copyright: Dreamina Manager
+
+directories:
+  output: release
+  buildResources: build
+
+# 只打我们自己的代码；node_modules 里没有运行时依赖（浏览器通道用的是 Electron 内置能力）
+files:
+  - src/**/*
+  - package.json
+  - "!**/*.map"
+
+# Go 核心和前端产物作为「额外资源」放进来，不进 asar
+extraResources:
+  - from: ../go/manager.exe
+    to: manager.exe
+  - from: ../dist/web
+    to: web
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-安装包-${version}.exe
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Dreamina 账号管理器
+  installerLanguages:
+    - zh_CN
+  language: "2052"
+  deleteAppDataOnUninstall: false

@@ -1,0 +1,24 @@
+# 构建产物与依赖：容器里会重新装
+node_modules
+**/node_modules
+dist
+desktop/release
+desktop/node_modules
+
+# 数据与密钥：绝不能进镜像
+data
+*.db
+*.db-shm
+*.db-wal
+secret.key
+
+# 开发与文档
+.git
+.gitignore
+.probe
+.fix
+docs/img
+desktop/screen.png
+*.log
+*.md
+!docs/**/*.md

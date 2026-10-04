@@ -1,0 +1,14 @@
+{
+  "name": "dreamina-browser-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "浏览器通道 sidecar：为 Go 核心提供 Dreamina 所需的风控签名环境",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
