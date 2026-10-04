@@ -102,20 +102,36 @@ npm run dist        # 产出安装包到 desktop/release/
 需要 **Go 1.26+**、**Node 22+**、**pnpm**。
 
 ```bash
-pnpm install
-pnpm build                          # 构建前端到 dist/web
+# 依赖（首次）
+pnpm install                        # 前端构建依赖
+npm --prefix sidecar install        # 浏览器通道依赖
 
-cd go
-go build -o manager.exe ./cmd/manager
+# 构建
+pnpm build                          # 前端 → dist/web
+(cd go && go build -o manager.exe ./cmd/manager)
+```
 
-# 终端 1：浏览器通道
-cd ../sidecar && node server.mjs
+然后在**两个终端**里分别启动：
 
-# 终端 2：核心
-cd ../go && ./manager.exe serve
+```bash
+node sidecar/server.mjs             # 终端 1：浏览器通道
+
+go/manager.exe serve                # 终端 2：核心
 ```
 
 打开 `http://127.0.0.1:8787`。
+
+> 两条命令都在**仓库根目录**执行：这样 `manager.exe` 会自动找到 `dist/web`，
+> 数据也落在仓库根的 `data/`，不会像从 `go/` 里启动那样另建一份。
+
+**Windows 上可以直接双击根目录的批处理**，它们就是把上面的步骤串了起来：
+
+| 文件 | 作用 |
+| --- | --- |
+| `启动.bat` | 起浏览器通道 + 核心，并自动打开界面 |
+| `停止.bat` | 停掉核心与通道 |
+| `开发.bat` | 开发模式：Vite 热更新 + Electron（Electron 自己会拉起核心与通道） |
+| `打开界面.bat` | 单独打开界面（`启动.bat` 会调用它） |
 
 前端热更新：`pnpm dev:web`（Vite 跑在 5173，`/api` 与 `/v1` 代理到 8787）。
 
@@ -369,8 +385,7 @@ go/                              Go 核心
     sysproxy/                    系统代理探测
     tasks/                       生成任务队列
 
-src/web/                         React 前端（活跃）
-src/server/                      早期 TypeScript 实现（已被 Go 核心取代，保留作参考）
+src/web/                         React 前端
 
 desktop/                         Electron 桌面端
   src/main.js                    主进程：拉起核心、托盘、窗口
@@ -425,4 +440,3 @@ data/                            数据库与密钥（gitignore，**务必备份
 - 生成进度保存在进程内存 + 数据库；服务重启时进行中的任务会被标记为「已中断」，需要重新提交。
 - 桌面端与命令行模式**各自使用独立的 data 目录**（桌面端默认在 `%APPDATA%`），
   需要共用同一份账号时，给桌面端设 `MANAGER_DATA_DIR`。
-- `src/server/` 是早期 TypeScript 实现，**不再维护**，仅作历史参考。
